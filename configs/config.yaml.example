@@ -1,0 +1,46 @@
+server:
+  port: 8080
+  env: dev  # 环境：dev 或 prod
+
+mysql:
+  host: localhost
+  port: 3306
+  user: root
+  password: your_password_here  # 请修改为你的数据库密码
+  database: cyber_range
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  instance_ttl: 3600  # 实例过期时间（秒），1小时 = 3600秒
+
+
+docker:
+  # 部署模式: "local" (本地Docker) 或 "remote" (远程Docker)
+  mode: "local"
+  
+  # 本地 Docker 配置（mode=local时使用）
+  local:
+    host: ""  # 留空使用本地 Docker socket
+    tls_verify: false
+    cert_path: ""
+    
+  # 远程 Docker 配置（mode=remote时使用）
+  remote:
+    host: "tcp://192.168.1.100:2375"  # 示例：远程Docker主机地址
+    tls_verify: false  # 如果使用TLS加密连接，设为 true（端口通常为2376）
+    cert_path: ""  # TLS证书路径（可选）
+    
+  # 通用配置（本地和远程都使用）
+  port_range_min: 20000
+  port_range_max: 40000
+  memory_limit: 134217728  # 内存限制：128MB（字节）
+  cpu_limit: 0.5
+  
+instance:
+  max_per_user: 1  # 每个用户最多同时运行的实例数
+  ttl_hours: 1  # 实例存活时间（小时）

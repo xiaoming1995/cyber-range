@@ -1,0 +1,62 @@
+# ===== OS Files =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===== Environment =====
+.env
+.env.local
+.env.*.local
+
+# ===== Go =====
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage*.out
+main
+
+# ===== Build Artifacts =====
+/api
+
+# ===== Node.js =====
+web/node_modules/
+web/dist/
+web/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== Docker =====
+docker-certs/
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Temp =====
+tmp/
+temp/
+*.tmp
+
+# ===== Secrets (安全相关) =====
+*.pem
+*.key
+*.crt
+!scripts/*.pem
+
+# ===== Large Files =====
+images/*.tar
+*.tar
+*.iso
+*.img
