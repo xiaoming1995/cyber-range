@@ -135,9 +135,11 @@ const AdminChallengeNew: React.FC = () => {
                 loading={loadingImages}
                 placeholder="选择 Docker 镜像"
                 showSearch
-                optionFilterProp="label"
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
                 options={dockerImages.map(img => ({
-                  label: `${img.name}:${img.tag} ${img.description ? `- ${img.description}` : ''}`,
+                  label: `${img.name}:${img.tag}${img.description ? ` - ${img.description}` : ''}`,
                   value: img.id,
                 }))}
                 notFoundContent={loadingImages ? '加载中...' : '暂无镜像，请先导入镜像'}
@@ -212,7 +214,7 @@ const AdminChallengeNew: React.FC = () => {
         ),
       },
     ],
-    [],
+    [dockerImages, loadingImages, dockerHosts, loadingHosts],
   );
 
   return (
