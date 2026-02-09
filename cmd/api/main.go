@@ -195,6 +195,7 @@ func main() {
 			// Docker 镜像管理
 			protected.GET("/images", imageHandler.List)
 			protected.POST("/images", imageHandler.Register)
+			protected.DELETE("/images/:id", imageHandler.Delete)
 			protected.POST("/images/sync", imageHandler.Sync)
 			protected.POST("/images/preload", imageHandler.Preload)
 			protected.POST("/images/upload", imageHandler.Upload)

@@ -456,10 +456,14 @@ export interface ImageUploadResult {
  */
 export async function uploadImage(
     file: File,
+    tag: string = '',
     onProgress?: (percent: number) => void
 ): Promise<ImageUploadResult> {
     const formData = new FormData();
     formData.append('file', file);
+    if (tag) {
+        formData.append('tag', tag);
+    }
 
     const response = await adminApi.post<APIResponse<ImageUploadResult>>('/images/upload', formData, {
         headers: {
@@ -479,6 +483,13 @@ export async function uploadImage(
     }
 
     return response.data.data!;
+}
+// 删除镜像
+export async function deleteImage(id: string): Promise<void> {
+    const response = await adminApi.delete<APIResponse<null>>(`/images/${id}`);
+    if (response.data.code !== 200) {
+        throw new Error(response.data.msg || '删除失败');
+    }
 }
 
 // Overview Stats

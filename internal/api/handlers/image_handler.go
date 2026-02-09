@@ -170,8 +170,11 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		return
 	}
 
+	// 获取自定义标签（可选）
+	customTag := c.PostForm("tag")
+
 	// 5. 调用 Service 导入镜像
-	result, err := h.svc.ImportFromTar(c.Request.Context(), tempFile)
+	result, err := h.svc.ImportFromTar(c.Request.Context(), tempFile, customTag)
 	if err != nil {
 		// 清理临时文件
 		os.Remove(tempFile)
@@ -186,5 +189,31 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		Code: 200,
 		Msg:  "镜像导入成功",
 		Data: result,
+	})
+}
+
+// Delete 删除镜像
+// DELETE /api/admin/images/:id
+func (h *ImageHandler) Delete(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.PureJSON(http.StatusBadRequest, APIResponse{
+			Code: 400,
+			Msg:  "参数错误: id 为空",
+		})
+		return
+	}
+
+	if err := h.svc.DeleteImage(c.Request.Context(), id); err != nil {
+		c.PureJSON(http.StatusBadRequest, APIResponse{ // 使用 400 因为通常是有关联数据无法删除
+			Code: 400,
+			Msg:  err.Error(),
+		})
+		return
+	}
+
+	c.PureJSON(http.StatusOK, APIResponse{
+		Code: 200,
+		Msg:  "删除成功",
 	})
 }

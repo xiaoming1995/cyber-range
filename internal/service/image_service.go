@@ -224,13 +224,13 @@ func (s *ImageService) PreloadAllImages(ctx context.Context) error {
 
 // ImportResult 镜像导入结果
 type ImportResult struct {
-	ImageName   string `json:"image_name"`   // 原始镜像名
+	ImageName   string `json:"image_name"`   // 最终镜像名:标签
 	RegistryTag string `json:"registry_tag"` // Registry 中的完整标签
 	Pushed      bool   `json:"pushed"`       // 是否推送成功
 }
 
 // ImportFromTar 从 tar 文件导入镜像并推送到 Registry
-func (s *ImageService) ImportFromTar(ctx context.Context, tarFilePath string) (*ImportResult, error) {
+func (s *ImageService) ImportFromTar(ctx context.Context, tarFilePath string, customTag string) (*ImportResult, error) {
 	logger.Info(ctx, "开始导入镜像", "file", tarFilePath)
 
 	// 1. 执行 docker load
@@ -267,6 +267,11 @@ func (s *ImageService) ImportFromTar(ctx context.Context, tarFilePath string) (*
 		parts := strings.SplitN(loadedImage, ":", 2)
 		imageName = parts[0]
 		imageTag = parts[1]
+	}
+
+	// 如果提供了自定义标签，则覆盖默认标签
+	if customTag != "" {
+		imageTag = customTag
 	}
 
 	// 移除可能的 registry 前缀（如果源镜像带有其他 registry）
@@ -326,10 +331,75 @@ func (s *ImageService) ImportFromTar(ctx context.Context, tarFilePath string) (*
 	logger.Info(ctx, "镜像导入完成", "name", imageName, "tag", imageTag)
 
 	return &ImportResult{
-		ImageName:   loadedImage,
+		ImageName:   fmt.Sprintf("%s:%s", imageName, imageTag), // 返回最终的镜像名:标签
 		RegistryTag: registryTag,
 		Pushed:      true,
 	}, nil
+}
+
+// DeleteImage 删除镜像
+func (s *ImageService) DeleteImage(ctx context.Context, id string) error {
+	// 1. 获取镜像信息
+	img, err := s.repo.GetImageByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// 2. 尝试从 Registry 删除镜像（同步删除文件）
+	// 注意：Registry 必须开启 storage.delete.enabled: true
+	if img.Registry != "" {
+		// 构造 Registry URL，假设 http 协议，实际应根据配置判断
+		// 这里简化处理，直接使用 img.Registry，如果是 localhost:5000 则默认 http
+
+		registryBase := fmt.Sprintf("http://%s", img.Registry)
+
+		// 2.1 获取 Manifest Digest
+		// GET /v2/<name>/manifests/<tag>
+		// Header Accept: application/vnd.docker.distribution.manifest.v2+json
+		manifestURL := fmt.Sprintf("%s/v2/%s/manifests/%s", registryBase, img.Name, img.Tag)
+		req, err := http.NewRequestWithContext(ctx, "GET", manifestURL, nil)
+		if err == nil {
+			// 支持 Docker Schema 2 和 OCI Manifest
+			req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				logger.Warn(ctx, "连接 Registry 失败，无法删除远程镜像", "err", err)
+			} else {
+				defer resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					digest := resp.Header.Get("Docker-Content-Digest")
+					if digest != "" {
+						// 2.2 删除 Manifest
+						// DELETE /v2/<name>/manifests/<digest>
+						deleteURL := fmt.Sprintf("%s/v2/%s/manifests/%s", registryBase, img.Name, digest)
+						delReq, _ := http.NewRequestWithContext(ctx, "DELETE", deleteURL, nil)
+						delResp, err := http.DefaultClient.Do(delReq)
+						if err != nil {
+							logger.Warn(ctx, "发送删除请求失败", "err", err)
+						} else {
+							defer delResp.Body.Close()
+							if delResp.StatusCode == http.StatusAccepted || delResp.StatusCode == http.StatusOK {
+								logger.Info(ctx, "Registry 镜像删除成功", "digest", digest)
+							} else {
+								body, _ := io.ReadAll(delResp.Body)
+								logger.Warn(ctx, "Registry 删除失败", "status", delResp.Status, "body", string(body))
+							}
+						}
+					}
+				} else {
+					logger.Warn(ctx, "获取镜像 Manifest 失败", "status", resp.Status)
+				}
+			}
+		}
+	}
+
+	// 3. 删除数据库记录
+	if err := s.repo.DeleteImage(ctx, id); err != nil {
+		return fmt.Errorf("删除镜像失败: %w", err)
+	}
+
+	logger.Info(ctx, "镜像删除成功", "id", id, "name", img.Name, "tag", img.Tag)
+	return nil
 }
 
 // generateImageID 生成镜像 ID

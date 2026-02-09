@@ -17,6 +17,7 @@ docker run -d \
   --name cyber-range-registry \
   --restart=always \
   -p 5000:5000 \
+  -e REGISTRY_STORAGE_DELETE_ENABLED=true \
   -v ~/cyber-range-registry:/var/lib/registry \
   registry:2
 
