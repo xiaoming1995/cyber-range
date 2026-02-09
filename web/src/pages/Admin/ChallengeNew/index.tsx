@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Form, Input, InputNumber, Select, Space, Tabs, Typography, message } from 'antd';
+import { Button, Form, Input, InputNumber, Select, Space, Switch, Tabs, Tooltip, Typography, message } from 'antd';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { ChallengeCategory, ChallengeDifficulty, ChallengeStatus } from '../../../admin/types';
 import { createChallenge, getImages, type DockerImage } from '../../../api/admin';
@@ -93,6 +94,22 @@ const AdminChallengeNew: React.FC = () => {
     fetchImages();
   }, []);
 
+  // 镜像选择时自动填充推荐资源
+  const handleImageChange = (imageId: string) => {
+    const selectedImage = dockerImages.find(img => img.id === imageId);
+    if (selectedImage) {
+      // 自动填充推荐资源 (仅当当前值为空或0时)
+      const currentMemory = form.getFieldValue('memory_limit');
+      const currentCPU = form.getFieldValue('cpu_limit');
+      if (!currentMemory && selectedImage.recommended_memory) {
+        form.setFieldValue('memory_limit', Math.round(selectedImage.recommended_memory / 1024 / 1024)); // 转换为 MB
+      }
+      if (!currentCPU && selectedImage.recommended_cpu) {
+        form.setFieldValue('cpu_limit', selectedImage.recommended_cpu);
+      }
+    }
+  };
+
   const tabs = useMemo(
     () => [
       {
@@ -138,6 +155,7 @@ const AdminChallengeNew: React.FC = () => {
                 filterOption={(input, option) =>
                   (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                 }
+                onChange={handleImageChange}
                 options={dockerImages.map(img => ({
                   label: `${img.name}:${img.tag}${img.description ? ` - ${img.description}` : ''}`,
                   value: img.id,
@@ -194,10 +212,40 @@ const AdminChallengeNew: React.FC = () => {
               >
                 <InputNumber min={1} max={65535} style={{ width: '100%' }} />
               </Form.Item>
-              <Form.Item name="status" label="状态" style={{ minWidth: 220 }} rules={[{ required: true, message: '请选择状态' }]}>
-                <Select options={statusOptions} />
+              <Form.Item
+                name="memory_limit"
+                label="内存限制 (MB)"
+                tooltip="容器最大可用内存，留空表示使用默认值(128MB)"
+                style={{ minWidth: 220 }}
+              >
+                <InputNumber min={0} max={8192} placeholder="128" style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item
+                name="cpu_limit"
+                label="CPU 限制 (核)"
+                tooltip="容器最大可用CPU核心数，留空表示使用默认值(0.5核)"
+                style={{ minWidth: 220 }}
+              >
+                <InputNumber min={0} max={8} step={0.1} placeholder="0.5" style={{ width: '100%' }} />
               </Form.Item>
             </Space>
+            <Form.Item
+              name="privileged"
+              label={
+                <Space>
+                  特权模式
+                  <Tooltip title="启用后容器将以 --privileged 模式运行，拥有完整权限。仅在必要时启用。">
+                    <ExclamationCircleOutlined style={{ color: '#faad14' }} />
+                  </Tooltip>
+                </Space>
+              }
+              valuePropName="checked"
+            >
+              <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+            </Form.Item>
+            <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+              <Select options={statusOptions} style={{ maxWidth: 220 }} />
+            </Form.Item>
           </Space>
         ),
       },
@@ -214,7 +262,7 @@ const AdminChallengeNew: React.FC = () => {
         ),
       },
     ],
-    [dockerImages, loadingImages, dockerHosts, loadingHosts],
+    [dockerImages, loadingImages, dockerHosts, loadingHosts, form, handleImageChange],
   );
 
   return (
@@ -237,7 +285,12 @@ const AdminChallengeNew: React.FC = () => {
                   navigate('/admin/login');
                   return;
                 }
-                await createChallenge(values);
+                // 内存单位转换: MB -> Bytes
+                const submitData = { ...values };
+                if (submitData.memory_limit) {
+                  submitData.memory_limit = Math.round(submitData.memory_limit * 1024 * 1024);
+                }
+                await createChallenge(submitData);
                 message.success('已创建');
                 navigate('/admin/challenges');
               } catch (error: any) {
@@ -262,7 +315,12 @@ const AdminChallengeNew: React.FC = () => {
                   navigate('/admin/login');
                   return;
                 }
-                await createChallenge({ ...values, status: 'published' });
+                // 内存单位转换: MB -> Bytes
+                const submitData = { ...values, status: 'published' };
+                if (submitData.memory_limit) {
+                  submitData.memory_limit = Math.round(submitData.memory_limit * 1024 * 1024);
+                }
+                await createChallenge(submitData);
                 message.success('已创建并上架');
                 navigate('/admin/challenges');
               } catch (error: any) {
@@ -287,6 +345,9 @@ const AdminChallengeNew: React.FC = () => {
           image: '',
           docker_host_id: '', // 会在 useEffect 中设置默认值
           port: 80,
+          memory_limit: undefined,
+          cpu_limit: undefined,
+          privileged: false,
           status: 'unpublished',
           descriptionHtml: '',
           hintHtml: '',
