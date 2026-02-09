@@ -152,8 +152,15 @@ func (h *ImageHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	// 4. 保存到临时目录
-	tempDir := os.TempDir()
+	// 4. 保存到项目本地临时目录（避免 macOS 系统临时目录权限问题）
+	tempDir := "./tmp/uploads"
+	if err := os.MkdirAll(tempDir, 0755); err != nil {
+		c.PureJSON(http.StatusInternalServerError, APIResponse{
+			Code: 500,
+			Msg:  "创建临时目录失败: " + err.Error(),
+		})
+		return
+	}
 	tempFile := filepath.Join(tempDir, "cyberrange_upload_"+file.Filename)
 	if err := c.SaveUploadedFile(file, tempFile); err != nil {
 		c.PureJSON(http.StatusInternalServerError, APIResponse{
