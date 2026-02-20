@@ -8,16 +8,15 @@ const { Title } = Typography;
 const Login: React.FC = () => {
   const navigate = useNavigate();
 
-  const onFinish = (values: Record<string, unknown>) => {
-    console.log('Received values of form: ', values);
+  const onFinish = (_values: Record<string, unknown>) => {
     navigate('/');
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
       minHeight: '100vh',
       background: '#f0f2f5'
     }}>
@@ -26,7 +25,7 @@ const Login: React.FC = () => {
           <Title level={3}>Cyber Range</Title>
           <p>网络安全实战演练平台</p>
         </div>
-        
+
         <Tabs
           defaultActiveKey="1"
           centered

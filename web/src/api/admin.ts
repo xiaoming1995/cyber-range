@@ -491,6 +491,3 @@ export async function deleteImage(id: string): Promise<void> {
         throw new Error(response.data.msg || '删除失败');
     }
 }
-
-// Overview Stats
-

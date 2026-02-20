@@ -55,16 +55,12 @@ const ChallengeEditDrawer: React.FC<Props> = ({ open, challenge, onClose, onSave
     const fetchDockerHosts = async () => {
       try {
         setLoadingHosts(true);
-        console.warn('[Debug] Fetching docker hosts via adminApi...');
 
         // 使用 adminApi，自动处理 baseURL 和 Token
         const response = await adminApi.get('/docker-hosts');
 
-        console.warn('[Debug] API Response:', response.data);
-
         if (response.data.code === 200) {
           setDockerHosts(response.data.data);
-          console.warn(`[Debug] Loaded ${response.data.data.length} hosts`);
         } else {
           message.error('加载 Docker 主机失败: ' + response.data.msg);
         }
@@ -137,9 +133,8 @@ const ChallengeEditDrawer: React.FC<Props> = ({ open, challenge, onClose, onSave
 
       if (found) {
         resolvedImageId = found.id;
-        console.log('[Debug] Auto-matched image:', targetImage, '->', found.id);
       } else {
-        console.warn('[Debug] Failed to match image:', targetImage, 'Available:', dockerImages.map(i => i.name));
+        // 未匹配到镜像，使用空值
       }
     }
 
@@ -178,7 +173,7 @@ const ChallengeEditDrawer: React.FC<Props> = ({ open, challenge, onClose, onSave
         const res = await adminApi.get(`/challenges/${challenge.id}`);
         if (res.data.code === 200) {
           const detail = res.data.data;
-          console.log('[Debug] Fetched full detail:', detail);
+
           // 更新 privileged 字段
           // 注意：如果详情接口返回的字段名是 privileged，则直接使用
           if (detail.privileged !== undefined) {
