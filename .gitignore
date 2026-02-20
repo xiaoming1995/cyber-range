@@ -42,7 +42,7 @@ docker-certs/
 
 # ===== Logs =====
 *.log
-logs/
+/logs/
 
 # ===== Temp =====
 tmp/
